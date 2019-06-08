@@ -27,6 +27,8 @@ gsettings.set_property('gtk-font-name', font)
 
 global_monitor = global_config_parser.getint('emulation settings', 'monitor')
 
+goglib_download_dir = global_config_parser.get('goglib preferences', 'goglib_download_dir')
+mylib_download_dir = global_config_parser.get('mylib preferences', 'mylib_download_dir')
 goglib_install_dir = global_config_parser.get('goglib preferences', 'goglib_install_dir')
 mylib_install_dir = global_config_parser.get('mylib preferences', 'mylib_install_dir')
 
@@ -53,6 +55,10 @@ class GUI:
 
         self.game_name = game_name
 
+        if os.path.exists(goglib_download_dir + '/' + game_name):
+            self.download_dir = goglib_download_dir
+        elif os.path.exists(mylib_download_dir + '/' + game_name):
+            self.download_dir = mylib_download_dir
         if os.path.exists(goglib_install_dir + '/' + game_name):
             self.install_dir = goglib_install_dir
         elif os.path.exists(mylib_install_dir + '/' + game_name):
@@ -191,6 +197,16 @@ class GUI:
         self.combobox_monitor.set_active(self.monitor)
 
         self.combobox_monitor.connect('changed', self.cb_combobox_monitor)
+
+        self.button_dlc = Gtk.Button(
+            label = _("Install DLC(s)"),
+            no_show_all = True
+            )
+        if not os.path.exists(self.download_dir + '/' + self.game_name + '/dlc'):
+            self.button_dlc.set_visible(False)
+        else:
+            self.button_dlc.set_visible(True)
+        self.button_dlc.connect('clicked', self.cb_button_dlc)
 
         self.button_settings = Gtk.Button(
             label = _("Game settings"),
@@ -390,9 +406,10 @@ class GUI:
         self.grid.attach(self.label_launcher, 0, 4, 1, 1)
         self.grid.attach(self.radiobutton_gog_launcher, 1, 4, 1, 1)
         self.grid.attach(self.radiobutton_gn_launcher, 1, 5, 1, 1)
-        self.grid.attach(self.button_settings, 0, 6, 2, 1)
-        self.grid.attach(self.button_game, 0, 7, 2, 1)
-        self.grid.attach(self.checkbutton_show_launcher, 0, 8, 2, 1)
+        self.grid.attach(self.button_dlc, 0, 6, 2, 1)
+        self.grid.attach(self.button_settings, 0, 7, 2, 1)
+        self.grid.attach(self.button_game, 0, 8, 2, 1)
+        self.grid.attach(self.checkbutton_show_launcher, 0, 9, 2, 1)
         self.main_window.add(self.grid)
 
         if self.launcher == True:
@@ -447,6 +464,52 @@ class GUI:
     def cb_radiobuttons(self, radiobutton):
         if radiobutton.get_active() == True:
             self.launcher_type = radiobutton.get_name()
+
+    def cb_button_dlc(self, button):
+
+        self.main_window.hide()
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+
+        dlcs_path = self.download_dir + '/' + self.game_name + '/dlc'
+        dlcs_list = os.listdir(dlcs_path)
+
+        message_dialog = Gtk.MessageDialog(
+            self.main_window,
+            0,
+            Gtk.MessageType.QUESTION,
+            Gtk.ButtonsType.CANCEL,
+            _("Available DLCs:"),
+            )
+        content_area = message_dialog.get_content_area()
+        content_area.set_property('margin-left', 5)
+        content_area.set_property('margin-right', 5)
+        content_area.set_property('margin-top', 5)
+        content_area.set_property('margin-bottom', 5)
+        content_area.set_property('spacing', 5)
+        action_area = message_dialog.get_action_area()
+        action_area.set_property('spacing', 5)
+
+        def cb_button(button):
+
+            dlc_name = button.get_name()
+            dlc_dir = self.download_dir + '/' + self.game_name + '/dlc/' + dlc_name
+            dlc_files = os.listdir(dlc_dir)
+            dlc_installer = dlc_files[0]
+            subprocess.call(['sh', dlc_dir + '/' + dlc_installer])
+
+        for dlc in dlcs_list:
+            button = Gtk.Button(
+                name = dlc,
+                label = dlc.replace('_', ' ').title()
+                )
+            button.connect('clicked', cb_button)
+            content_area.pack_start(button, True, True, 0)
+
+        message_dialog.show_all()
+        message_dialog.run()
+        message_dialog.destroy()
+        self.main_window.show()
 
     def cb_button_settings(self, button):
 

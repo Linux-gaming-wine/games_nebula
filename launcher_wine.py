@@ -1092,6 +1092,17 @@ class GUI:
         action_area = message_dialog.get_action_area()
         action_area.set_property('spacing', 5)
 
+        def get_dlc_installer(dlc_name):
+
+            dlc_dir = self.download_dir + '/' + self.game_name + '/dlc/' + dlc_name
+            dlc_files = os.listdir(dlc_dir)
+            dlc_installer = None
+            for file_name in sorted(dlc_files):
+                if '.exe' in file_name:
+                    dlc_installer = file_name
+
+            return dlc_installer
+
         def cb_button(button):
 
             self.set_wineprefix()
@@ -1101,21 +1112,18 @@ class GUI:
             self.set_additions_command()
 
             dlc_name = button.get_name()
-            dlc_dir = self.download_dir + '/' + self.game_name + '/dlc/' + dlc_name
-            dlc_files = os.listdir(dlc_dir)
-            dlc_installer = dlc_files[0]
-            for f in dlc_files:
-                if '.exe' in f:
-                    dlc_installer = f
+            dlc_installer = get_dlc_installer(dlc_name)
             subprocess.call([os.getenv('WINE'), dlc_dir + '/' + dlc_installer])
 
         for dlc in dlcs_list:
-            button = Gtk.Button(
-                name = dlc,
-                label = dlc.replace('_', ' ').title()
-                )
-            button.connect('clicked', cb_button)
-            content_area.pack_start(button, True, True, 0)
+            dlc_installer = get_dlc_installer(dlc)
+            if dlc_installer != None:
+                button = Gtk.Button(
+                    name = dlc,
+                    label = dlc.replace('_', ' ').title()
+                    )
+                button.connect('clicked', cb_button)
+                content_area.pack_start(button, True, True, 0)
 
         message_dialog.show_all()
         message_dialog.run()
